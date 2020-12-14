@@ -1,5 +1,6 @@
 import random
 import math
+import numpy as np
 import colorama
 
 UP = (0, 1)
@@ -60,15 +61,8 @@ class Wavefunction(object):
         Returns:
         A 2-D matrix in which each element is a set
         """
-        coefficients = []
-
-        for x in range(size[0]):
-            row = []
-            for y in range(size[1]):
-                row.append(set(tiles))
-            coefficients.append(row)
-
-        return coefficients
+        coefficients = np.frompyfunc(set, 1, 1)
+        return coefficients(np.full(size, tiles))
 
     def __init__(self, coefficients, weights):
         self.coefficients = coefficients
@@ -76,8 +70,7 @@ class Wavefunction(object):
 
     def get(self, co_ords):
         """Returns the set of possible tiles at `co_ords`"""
-        x, y = co_ords
-        return self.coefficients[x][y]
+        return self.coefficients[co_ords]
 
     def get_collapsed(self, co_ords):
         """Returns the only remaining possible tile at `co_ords`.
@@ -126,12 +119,8 @@ class Wavefunction(object):
         """Returns true if every element in Wavefunction is fully
         collapsed, and false otherwise.
         """
-        for x, row in enumerate(self.coefficients):
-            for y, sq in enumerate(row):
-                if len(sq) > 1:
-                    return False
-
-        return True
+        vfunc = np.vectorize(lambda t: len(t) > 1)
+        return not np.any(vfunc(self.coefficients))
 
     def collapse(self, co_ords):
         """Collapses the wavefunction at `co_ords` to a single, definite
@@ -163,8 +152,7 @@ class Wavefunction(object):
 
         This method mutates the Wavefunction, and does not return anything.
         """
-        x, y = co_ords
-        self.coefficients[x][y].remove(forbidden_tile)
+        self.coefficients[co_ords].remove(forbidden_tile)
 
 
 class Model(object):
