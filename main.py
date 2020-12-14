@@ -87,27 +87,19 @@ class Wavefunction(object):
         does not have exactly 1 remaining possible tile then
         this method raises an exception.
         """
-        width = len(self.coefficients)
-        height = len(self.coefficients[0])
-
-        collapsed = []
-        for x in range(width):
-            row = []
-            for y in range(height):
-                row.append(self.get_collapsed((x,y)))
-            collapsed.append(row)
-
+        # TODO: Convert to frompyfunc?
+        collapsed = np.chararray(self.coefficients.shape, unicode=True)
+        for index in np.ndindex(collapsed.shape):
+            collapsed[index] = self.get_collapsed(index)
         return collapsed
 
     def shannon_entropy(self, co_ords):
         """Calculates the Shannon Entropy of the wavefunction at
         `co_ords`.
         """
-        x, y = co_ords
-
         sum_of_weights = 0
         sum_of_weight_log_weights = 0
-        for opt in self.coefficients[x][y]:
+        for opt in self.coefficients[co_ords]:
             weight = self.weights[opt]
             sum_of_weights += weight
             sum_of_weight_log_weights += weight * math.log(weight)
@@ -146,13 +138,13 @@ class Wavefunction(object):
 
         self.coefficients[x][y] = set(chosen)
 
-    def constrain(self, co_ords, forbidden_tile):
+    def constrain(self, coords, forbidden_tile):
         """Removes `forbidden_tile` from the list of possible tiles
         at `co_ords`.
 
         This method mutates the Wavefunction, and does not return anything.
         """
-        self.coefficients[co_ords].remove(forbidden_tile)
+        self.coefficients[coords].remove(forbidden_tile)
 
 
 class Model(object):
@@ -234,7 +226,7 @@ class Model(object):
         width, height = self.output_size
         for x in range(width):
             for y in range(height):
-                if len(self.wavefunction.get((x,y))) == 1:
+                if len(self.wavefunction.get((x, y))) == 1:
                     continue
 
                 entropy = self.wavefunction.shannon_entropy((x, y))
