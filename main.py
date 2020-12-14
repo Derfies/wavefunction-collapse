@@ -1,7 +1,9 @@
-import random
 import math
-import numpy as np
+import random
+
 import colorama
+import numpy as np
+
 
 UP = (0, 1)
 LEFT = (-1, 0)
@@ -12,10 +14,11 @@ DIRS = [UP, DOWN, LEFT, RIGHT]
 
 class CompatibilityOracle(object):
 
-    """The CompatibilityOracle class is responsible for telling us
-    which combinations of tiles and directions are compatible. It's
-    so simple that it perhaps doesn't need to be a class, but I think
-    it helps keep things clear.
+    """
+    The CompatibilityOracle class is responsible for telling us which
+    combinations of tiles and directions are compatible. It's so simple that it
+    perhaps doesn't need to be a class, but I think it helps keep things clear.
+
     """
 
     def __init__(self, data):
@@ -27,32 +30,37 @@ class CompatibilityOracle(object):
 
 class Wavefunction(object):
 
-    """The Wavefunction class is responsible for storing which tiles
-    are permitted and forbidden in each location of an output image.
+    """
+    The Wavefunction class is responsible for storing which tiles are permitted
+    and forbidden in each location of an output image.
+
     """
 
     @staticmethod
     def mk(size, weights):
-        """Initialize a new Wavefunction for a grid of `size`,
-        where the different tiles have overall weights `weights`.
+        """
+        Initialize a new Wavefunction for a grid of `size`, where the different
+        tiles have overall weights `weights`.
 
         Arguments:
         size -- a 2-tuple of (width, height)
         weights -- a dict of tile -> weight of tile
+
         """
         coefficients = Wavefunction.init_coefficients(size, weights.keys())
         return Wavefunction(coefficients, weights)
 
     @staticmethod
     def init_coefficients(size, tiles):
-        """Initializes a 2-D wavefunction matrix of coefficients.
-        The matrix has size `size`, and each element of the matrix
-        starts with all tiles as possible. No tile is forbidden yet.
+        """
+        Initializes a 2-D wavefunction matrix of coefficients. The matrix has
+        size `size`, and each element of the matrix starts with all tiles as
+        possible. No tile is forbidden yet.
 
-        NOTE: coefficients is a slight misnomer, since they are a
-        set of possible tiles instead of a tile -> number/bool dict. This
-        makes the code a little simpler. We keep the name `coefficients`
-        for consistency with other descriptions of Wavefunction Collapse.
+        NOTE: coefficients is a slight misnomer, since they are a set of
+        possible tiles instead of a tile -> number/bool dict. This makes the
+        code a little simpler. We keep the name `coefficients` for consistency
+        with other descriptions of Wavefunction Collapse.
 
         Arguments:
         size -- a 2-tuple of (width, height)
@@ -60,6 +68,7 @@ class Wavefunction(object):
 
         Returns:
         A 2-D matrix in which each element is a set
+
         """
         coefficients = np.frompyfunc(set, 1, 1)
         return coefficients(np.full(size, tiles))
@@ -68,24 +77,26 @@ class Wavefunction(object):
         self.coefficients = coefficients
         self.weights = weights
 
-    def get(self, co_ords):
-        """Returns the set of possible tiles at `co_ords`"""
-        return self.coefficients[co_ords]
+    def get(self, coords):
+        """Returns the set of possible tiles at `coords`"""
+        return self.coefficients[coords]
 
-    def get_collapsed(self, co_ords):
-        """Returns the only remaining possible tile at `co_ords`.
-        If there is not exactly 1 remaining possible tile then
-        this method raises an exception.
+    def get_collapsed(self, coords):
         """
-        opts = self.get(co_ords)
+        Returns the only remaining possible tile at `coords`. If there is not
+        exactly 1 remaining possible tile then this method raises an exception.
+
+        """
+        opts = self.get(coords)
         assert(len(opts) == 1)
         return next(iter(opts))
 
     def get_all_collapsed(self):
-        """Returns a 2-D matrix of the only remaining possible
-        tiles at each location in the wavefunction. If any location
-        does not have exactly 1 remaining possible tile then
-        this method raises an exception.
+        """
+        Returns a 2-D matrix of the only remaining possible tiles at each
+        location in the wavefunction. If any location does not have exactly 1
+        remaining possible tile then this method raises an exception.
+
         """
         # TODO: Convert to frompyfunc?
         collapsed = np.chararray(self.coefficients.shape, unicode=True)
@@ -93,13 +104,14 @@ class Wavefunction(object):
             collapsed[index] = self.get_collapsed(index)
         return collapsed
 
-    def shannon_entropy(self, co_ords):
-        """Calculates the Shannon Entropy of the wavefunction at
-        `co_ords`.
+    def shannon_entropy(self, coords):
+        """
+        Calculates the Shannon Entropy of the wavefunction at `coords`.
+
         """
         sum_of_weights = 0
         sum_of_weight_log_weights = 0
-        for opt in self.coefficients[co_ords]:
+        for opt in self.coefficients[coords]:
             weight = self.weights[opt]
             sum_of_weights += weight
             sum_of_weight_log_weights += weight * math.log(weight)
@@ -108,21 +120,24 @@ class Wavefunction(object):
 
 
     def is_fully_collapsed(self):
-        """Returns true if every element in Wavefunction is fully
-        collapsed, and false otherwise.
+        """
+        Returns true if every element in Wavefunction is fully collapsed, and
+        false otherwise.
+
         """
         vfunc = np.vectorize(lambda t: len(t) > 1)
         return not np.any(vfunc(self.coefficients))
 
-    def collapse(self, co_ords):
-        """Collapses the wavefunction at `co_ords` to a single, definite
-        tile. The tile is chosen randomly from the remaining possible tiles
-        at `co_ords`, weighted according to the Wavefunction's global
-        `weights`.
+    def collapse(self, coords):
+        """
+        Collapses the wavefunction at `coords` to a single, definite tile. The
+        tile is chosen randomly from the remaining possible tiles at `coords`,
+        weighted according to the Wavefunction's global `weights`.
 
         This method mutates the Wavefunction, and does not return anything.
+
         """
-        x, y = co_ords
+        x, y = coords
         opts = self.coefficients[x][y]
         valid_weights = {tile: weight for tile, weight in self.weights.items() if tile in opts}
 
@@ -139,18 +154,21 @@ class Wavefunction(object):
         self.coefficients[x][y] = set(chosen)
 
     def constrain(self, coords, forbidden_tile):
-        """Removes `forbidden_tile` from the list of possible tiles
-        at `co_ords`.
+        """
+        Removes `forbidden_tile` from the list of possible tiles at `coords`.
 
         This method mutates the Wavefunction, and does not return anything.
+
         """
         self.coefficients[coords].remove(forbidden_tile)
 
 
 class Model(object):
 
-    """The Model class is responsible for orchestrating the
-    Wavefunction Collapse algorithm.
+    """
+    The Model class is responsible for orchestrating the Wavefunction Collapse
+    algorithm.
+
     """
 
     def __init__(self, output_size, weights, compatibility_oracle):
@@ -160,8 +178,10 @@ class Model(object):
         self.wavefunction = Wavefunction.mk(output_size, weights)
 
     def run(self):
-        """Collapses the Wavefunction until it is fully collapsed,
-        then returns a 2-D matrix of the final, collapsed state.
+        """
+        Collapses the Wavefunction until it is fully collapsed, then returns a
+        2-D matrix of the final, collapsed state.
+
         """
         while not self.wavefunction.is_fully_collapsed():
             self.iterate()
@@ -169,29 +189,34 @@ class Model(object):
         return self.wavefunction.get_all_collapsed()
 
     def iterate(self):
-        """Performs a single iteration of the Wavefunction Collapse
-        Algorithm.
+        """
+        Performs a single iteration of the Wavefunction Collapse Algorithm.
+
         """
         # 1. Find the co-ordinates of minimum entropy
-        co_ords = self.min_entropy_co_ords()
+        coords = self.min_entropy_coords()
+
         # 2. Collapse the wavefunction at these co-ordinates
-        self.wavefunction.collapse(co_ords)
+        self.wavefunction.collapse(coords)
+
         # 3. Propagate the consequences of this collapse
-        self.propagate(co_ords)
+        self.propagate(coords)
 
-    def propagate(self, co_ords):
-        """Propagates the consequences of the wavefunction at `co_ords`
-        collapsing. If the wavefunction at (x,y) collapses to a fixed tile,
-        then some tiles may not longer be theoretically possible at
-        surrounding locations.
-
-        This method keeps propagating the consequences of the consequences,
-        and so on until no consequences remain.
+    def propagate(self, coords):
         """
-        stack = [co_ords]
+        Propagates the consequences of the wavefunction at `coords` collapsing.
+        If the wavefunction at (x,y) collapses to a fixed tile, then some tiles
+        may not longer be theoretically possible at surrounding locations.
+
+        This method keeps propagating the consequences of the consequences, and
+        so on until no consequences remain.
+
+        """
+        stack = [coords]
 
         while len(stack) > 0:
             cur_coords = stack.pop()
+
             # Get the set of all possible tiles at the current location
             cur_possible_tiles = self.wavefunction.get(cur_coords)
 
@@ -208,6 +233,7 @@ class Model(object):
                     other_tile_is_possible = any([
                         self.compatibility_oracle.check(cur_tile, other_tile, d) for cur_tile in cur_possible_tiles
                     ])
+
                     # If the tile is not compatible with any of the tiles in
                     # the current location's wavefunction then it is impossible
                     # for it to ever get chosen. We therefore remove it from
@@ -216,9 +242,11 @@ class Model(object):
                         self.wavefunction.constrain(other_coords, other_tile)
                         stack.append(other_coords)
 
-    def min_entropy_co_ords(self):
-        """Returns the co-ords of the location whose wavefunction has
-        the lowest entropy.
+    def min_entropy_coords(self):
+        """
+        Returns the co-ords of the location whose wavefunction has the lowest
+        entropy.
+
         """
         min_entropy = None
         min_entropy_coords = None
@@ -230,6 +258,7 @@ class Model(object):
                     continue
 
                 entropy = self.wavefunction.shannon_entropy((x, y))
+
                 # Add some noise to mix things up a little
                 entropy_plus_noise = entropy - (random.random() / 1000)
                 if min_entropy is None or entropy_plus_noise < min_entropy:
@@ -240,12 +269,15 @@ class Model(object):
 
 
 def render_colors(matrix, colors):
-    """Render the fully collapsed `matrix` using the given `colors.
+    """
+    Render the fully collapsed `matrix` using the given `colors.
 
     Arguments:
     matrix -- 2-D matrix of tiles
     colors -- dict of tile -> `colorama` color
+
     """
+    colorama.init(convert=True)
     for row in matrix:
         output_row = []
         for val in row:
@@ -256,9 +288,11 @@ def render_colors(matrix, colors):
 
 
 def valid_dirs(cur_co_ord, matrix_size):
-    """Returns the valid directions from `cur_co_ord` in a matrix
-    of `matrix_size`. Ensures that we don't try to take step to the
-    left when we are already on the left edge of the matrix.
+    """
+    Returns the valid directions from `cur_co_ord` in a matrix of `matrix_size`.
+    Ensures that we don't try to take step to the left when we are already on
+    the left edge of the matrix.
+
     """
     x, y = cur_co_ord
     width, height = matrix_size
@@ -273,7 +307,8 @@ def valid_dirs(cur_co_ord, matrix_size):
 
 
 def parse_example_matrix(matrix):
-    """Parses an example `matrix`. Extracts:
+    """
+    Parses an example `matrix`. Extracts:
     
     1. Tile compatibilities - which pairs of tiles can be placed next
         to each other and in which directions
@@ -287,6 +322,7 @@ def parse_example_matrix(matrix):
     * A set of compatibile tile combinations, where each combination is of
         the form (tile1, tile2, direction)
     * A dict of weights of the form tile -> weight
+
     """
     compatibilities = set()
     matrix_width = len(matrix)
