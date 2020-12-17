@@ -118,14 +118,13 @@ class Wavefunction(object):
 
         return math.log(sum_of_weights) - (sum_of_weight_log_weights / sum_of_weights)
 
-
     def is_fully_collapsed(self):
         """
         Returns true if every element in Wavefunction is fully collapsed, and
         false otherwise.
 
         """
-        vfunc = np.vectorize(lambda t: len(t) > 1)
+        vfunc = np.frompyfunc(lambda t: len(t) > 1, 1, 1)
         return not np.any(vfunc(self.coefficients))
 
     def collapse(self, coords):
@@ -137,9 +136,12 @@ class Wavefunction(object):
         This method mutates the Wavefunction, and does not return anything.
 
         """
-        x, y = coords
-        opts = self.coefficients[x][y]
-        valid_weights = {tile: weight for tile, weight in self.weights.items() if tile in opts}
+        opts = self.coefficients[coords]
+        valid_weights = {
+            tile: weight
+            for tile, weight in self.weights.items()
+            if tile in opts
+        }
 
         total_weights = sum(valid_weights.values())
         rnd = random.random() * total_weights
@@ -151,7 +153,7 @@ class Wavefunction(object):
                 chosen = tile
                 break
 
-        self.coefficients[x][y] = set(chosen)
+        self.coefficients[coords] = set(chosen)
 
     def constrain(self, coords, forbidden_tile):
         """
@@ -284,7 +286,7 @@ def render_colors(matrix, colors):
             color = colors[val]
             output_row.append(color + val + colorama.Style.RESET_ALL)
 
-        print("".join(output_row))
+        print(''.join(output_row))
 
 
 def valid_dirs(cur_co_ord, matrix_size):
@@ -332,8 +334,7 @@ def parse_example_matrix(matrix):
 
     for x, row in enumerate(matrix):
         for y, cur_tile in enumerate(row):
-            if cur_tile not in weights:
-                weights[cur_tile] = 0
+            weights.setdefault(cur_tile, 0)
             weights[cur_tile] += 1
 
             for d in valid_dirs((x,y), (matrix_width, matrix_height)):
