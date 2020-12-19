@@ -70,8 +70,10 @@ class Wavefunction(object):
         A 2-D matrix in which each element is a set
 
         """
-        coefficients = np.frompyfunc(set, 1, 1)
-        return coefficients(np.full(size, tiles))
+        shape = (len(tiles),) + size
+        coefficients = np.ones(shape, dtype=bool)
+        #print(coefficients)
+        return coefficients
 
     def __init__(self, coefficients, weights):
         self.coefficients = coefficients
@@ -124,8 +126,7 @@ class Wavefunction(object):
         false otherwise.
 
         """
-        vfunc = np.frompyfunc(lambda t: len(t) > 1, 1, 1)
-        return not np.any(vfunc(self.coefficients))
+        return not np.any(self.coefficients)
 
     def collapse(self, coords):
         """
@@ -137,11 +138,13 @@ class Wavefunction(object):
 
         """
         opts = self.coefficients[coords]
+        print(opts)
         valid_weights = {
             tile: weight
             for tile, weight in self.weights.items()
             if tile in opts
         }
+        print(valid_weights)
 
         total_weights = sum(valid_weights.values())
         rnd = random.random() * total_weights
@@ -162,6 +165,8 @@ class Wavefunction(object):
         This method mutates the Wavefunction, and does not return anything.
 
         """
+        #self.coefficients[coords].remove(forbidden_tile)
+        index = (len(tiles),) + coords
         self.coefficients[coords].remove(forbidden_tile)
 
 
@@ -250,6 +255,8 @@ class Model(object):
         entropy.
 
         """
+
+        '''
         min_entropy = None
         min_entropy_coords = None
 
@@ -268,6 +275,15 @@ class Model(object):
                     min_entropy_coords = (x, y)
 
         return min_entropy_coords
+        '''
+        unresolved_cell_mask = np.count_nonzero(self.wavefunction.coefficients, axis=0) > 1
+        cell_weights = np.where(
+            unresolved_cell_mask,
+            np.count_nonzero(self.wavefunction.coefficients, axis=0),
+            -np.inf,
+        )
+        row, col = np.unravel_index(np.argmax(cell_weights), cell_weights.shape)
+        return [row, col]
 
 
 def render_colors(matrix, colors):
